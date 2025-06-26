@@ -1,0 +1,45 @@
+name: .NET Framework CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-2022  # Required for .NET Framework
+    env:
+      SOLUTION_FILE: 'PoePart3.sln'
+      BUILD_CONFIGURATION: 'Release'
+      MSBUILD_PATH: 'C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Restore NuGet packages
+      run: nuget restore ${{ env.SOLUTION_FILE }}
+
+    - name: Build solution
+      run: |
+        "${{ env.MSBUILD_PATH }}" ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="Any CPU" /p:TargetFrameworkVersion=v4.7.2
+
+    - name: Run tests (if any)
+      run: |
+        "${{ env.MSBUILD_PATH }}" ${{ env.SOLUTION_FILE }} /t:Test /p:Configuration=${{ env.BUILD_CONFIGURATION }}
+
+    - name: Publish artifacts
+      run: |
+        mkdir publish
+        xcopy /E /I "PoePart3\bin\${{ env.BUILD_CONFIGURATION }}" publish
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: PoePart3-App
+        path: ./publish
+        retention-days: 5
